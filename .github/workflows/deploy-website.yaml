@@ -39,14 +39,15 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
+            echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
             export DOC_ROOT=${{ secrets.DOC_ROOT }}
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
             echo "building and running the container..."
             docker build --target production -t website:${{ env.COMMIT_SHA }} .
-            sudo rm -rf $DOC_ROOT/*
-            echo "copying to $DOC_ROOT"
+            rm -rf $DOC_ROOT/*
             docker run --rm --name website-container website:${{ env.COMMIT_SHA }} sleep infinity
+            echo "copying to $DOC_ROOT"
             docker cp website-container:/website/dist/. $DOC_ROOT/
             docker system prune -f
 
