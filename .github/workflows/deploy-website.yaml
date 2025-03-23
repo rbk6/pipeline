@@ -56,7 +56,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
 
             echo "running container to copy build files..."
-            docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
+            docker run -d --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
 
             echo "copying build to document root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
