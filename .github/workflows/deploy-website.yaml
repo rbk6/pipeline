@@ -1,0 +1,47 @@
+# CI/CD workflow for https://github.com/rbk6/website
+name: deploy website
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v2
+
+      - name: build docker image (without copying to apache dir)
+        id: build
+        run: |
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+          docker build -t website:$COMMIT_SHA --target build . || exit 1
+
+      # todo: add tests step
+
+      - name: push image to docker hub
+        run: |
+          docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker tag website:$COMMIT_SHA ${{ secrets.DOCKER_USERNAME }}/website:$COMMIT_SHA
+          docker push ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
+
+      - name: ssh to vps and deploy image
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_SSH_PORT }}
+          script: |
+            echo "pulling the latest docker image..."
+            docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
+            docker build -f Dockerfile -t website:${{ env.COMMIT_SHA }} --target production .
+            docker run -d -p 80:80 --name my-website website:${{ env.COMMIT_SHA }}
+            docker rmi ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} || true
+
+      - name: cleanup
+        run: |
+          docker system prune -f
