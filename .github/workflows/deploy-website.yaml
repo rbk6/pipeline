@@ -11,6 +11,10 @@ jobs:
     steps:
       - name: checkout repository
         uses: actions/checkout@v2
+        with:
+          repository: rbk6/website
+          token: ${{ secrets.DEPLOY_TOKEN }}
+          ref: master
 
       - name: build docker image (without copying to apache dir)
         id: build

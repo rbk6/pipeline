@@ -26,6 +26,7 @@ currently, there is no rollback method in place. if a failure occurs, the workfl
 
 in order to setup the workflow, the following variables will need to be set within [github secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions), specifically the repository ones:
 
+- DEPLOY_TOKEN
 - DOCKER_USERNAME
 - DOCKER_PASSWORD
 - VPS_HOST
