@@ -16,9 +16,6 @@ jobs:
           token: ${{ secrets.DEPLOY_TOKEN }}
           ref: master
 
-      - name: list files # in order to debug build failure due to no such file
-        run: ls -la && COMMIT_SHA=$(git rev-parse --short HEAD) # also verify sha is being retrieved correctly
-
       - name: build docker image (without copying to apache dir)
         id: build
         run: |
@@ -42,11 +39,14 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
+            export DOC_ROOT=${{ secrets.DOC_ROOT }}
+            echo "deploying to $DOC_ROOT"
+            echo "cleaning up previous files in $DOC_ROOT..."
+            rm -rf $DOC_ROOT/*
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
-            docker build -f Dockerfile -t website:${{ env.COMMIT_SHA }} --target production .
-            docker run -d -p 80:80 --name my-website website:${{ env.COMMIT_SHA }}
-            docker rmi ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} || true
+            echo "building and running the container..."
+            docker build -f Dockerfile -t website:${{ env.COMMIT_SHA }} --target production $DOC_ROOT
 
       - name: cleanup
         run: |
