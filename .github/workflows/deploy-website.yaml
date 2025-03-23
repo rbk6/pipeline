@@ -43,12 +43,8 @@ jobs:
             export DOC_ROOT=${{ secrets.DOC_ROOT }}
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
-            echo "building and running the container..."
-            docker build --target production -t website:${{ env.COMMIT_SHA }} .
             rm -rf $DOC_ROOT/*
-            docker run --rm --name website-container website:${{ env.COMMIT_SHA }} sleep infinity
-            echo "copying to $DOC_ROOT"
-            docker cp website-container:/website/dist/. $DOC_ROOT/
+            docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} sleep infinity
             docker system prune -f
 
       - name: cleanup
