@@ -16,6 +16,9 @@ jobs:
           token: ${{ secrets.DEPLOY_TOKEN }}
           ref: master
 
+      - name: list files # in order to debug build failure due to no such file
+        run: ls -la && COMMIT_SHA=$(git rev-parse --short HEAD) # also verify sha is being retrieved correctly
+
       - name: build docker image (without copying to apache dir)
         id: build
         run: |
