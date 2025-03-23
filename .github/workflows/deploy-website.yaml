@@ -2,9 +2,8 @@
 name: deploy website
 
 on:
-  push:
-    branches:
-      - master
+  repository_dispatch:
+    types: [deploy]
 
 jobs:
   build:
