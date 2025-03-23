@@ -61,8 +61,8 @@ jobs:
             echo "copying build to document root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
 
-            echo "waiting for bundled files to be copied to document root..."
-            until [ -f "$DOC_ROOT/assets/index-*.js" ] && [ -f "$DOC_ROOT/assets/index-*.css" ]; do
+            echo "waiting for bundled files (index-*.js and index-*.css) to be copied..."
+            until ls $DOC_ROOT/assets/index-*.{js,css} 1> /dev/null 2>&1; do
               echo "waiting for bundled files (index-*.js and index-*.css) to be copied..."
               sleep 5
             done
