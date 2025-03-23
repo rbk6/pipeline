@@ -55,26 +55,45 @@ jobs:
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
 
-            echo "cleaning document root..."
-            rm -rf $DOC_ROOT/*
             echo "running container to copy build files..."
             docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} sleep infinity
+
+            echo "waiting for container to become healthy..."
+            until [ "$(docker inspect --format '{{.State.Health.Status}}' website-container)" == "healthy" ]; do
+              echo "waiting for container to become healthy..."
+              sleep 5
+            done
+
+            echo "waiting for document root to be empty before cleanup..."
+            until [ -z "$(ls -A $DOC_ROOT)" ]; do
+              echo "document root is not empty, waiting for cleanup readiness..."
+              sleep 5
+            done
+            echo "document root is empty, proceeding with cleanup."
+
             echo "copying build to document root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
 
+            echo "waiting for bundled files to be copied to document root..."
+            until [ -f "$DOC_ROOT/assets/index-*.js" ] && [ -f "$DOC_ROOT/assets/index-*.css" ]; do
+              echo "waiting for bundled files (index-*.js and index-*.css) to be copied..."
+              sleep 5
+            done
+            echo "bundled files copied, proceeding with container cleanup."
+
             echo "checking if the container is running..."
             if docker ps -q -f name=website-container; then
-                echo "stopping and removing the running container..."
-                docker stop website-container
-                docker rm website-container
+              echo "stopping and removing the running container..."
+              docker stop website-container
+              docker rm website-container
             else
-                echo "no running container found, skipping stop and removal."
+              echo "no running container found, skipping stop and removal."
             fi
             if docker ps -a -q -f name=website-container; then
-                echo "removing stopped container..."
-                docker rm website-container
+              echo "removing stopped container..."
+              docker rm website-container
             else
-                echo "no stopped container found, skipping removal."
+              echo "no stopped container found, skipping removal."
             fi
 
             echo "pruning unused docker resources..."
