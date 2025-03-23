@@ -56,20 +56,7 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
 
             echo "running container to copy build files..."
-            docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} sleep infinity
-
-            echo "waiting for container to become healthy..."
-            until [ "$(docker inspect --format '{{.State.Health.Status}}' website-container)" == "healthy" ]; do
-              echo "waiting for container to become healthy..."
-              sleep 5
-            done
-
-            echo "waiting for document root to be empty before cleanup..."
-            until [ -z "$(ls -A $DOC_ROOT)" ]; do
-              echo "document root is not empty, waiting for cleanup readiness..."
-              sleep 5
-            done
-            echo "document root is empty, proceeding with cleanup."
+            docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
 
             echo "copying build to document root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
