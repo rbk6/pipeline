@@ -40,15 +40,12 @@ jobs:
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
             export DOC_ROOT=${{ secrets.DOC_ROOT }}
-            echo "deploying to $DOC_ROOT"
-            echo "cleaning up previous files in $DOC_ROOT..."
-            sudo chown -R $USER:$USER $DOC_ROOT
-            sudo chmod -R u+rw $DOC_ROOT
-            rm -rf $DOC_ROOT/*
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
             echo "building and running the container..."
-            docker build -f Dockerfile -t website:${{ env.COMMIT_SHA }} --target production $DOC_ROOT
+            docker build --build-arg DOC_ROOT=$DOC_ROOT --target production -t website:${{ env.COMMIT_SHA }} .
+            echo "copying to $DOC_ROOT"
+            docker system prune -f
 
       - name: cleanup
         run: |
