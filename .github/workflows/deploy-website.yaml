@@ -16,20 +16,30 @@ jobs:
           token: ${{ secrets.DEPLOY_TOKEN }}
           ref: master
 
-      - name: build docker image (without copying to apache dir)
+      - name: build docker image
         id: build
         run: |
           COMMIT_SHA=$(git rev-parse --short HEAD)
           echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
+          echo "building docker image for commit $COMMIT_SHA..."
           docker build -t website:$COMMIT_SHA --target build . || exit 1
+          echo "docker image built successfully."
 
       # todo: add tests step
 
       - name: push image to docker hub
         run: |
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          echo "logging in to docker hub..."
+          uses: docker/login-action@v2
+          with:
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
+
+          echo "tagging the docker image..."
           docker tag website:$COMMIT_SHA ${{ secrets.DOCKER_USERNAME }}/website:$COMMIT_SHA
+          echo "pushing image to docker hub..."
           docker push ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
+          echo "image pushed successfully."
 
       - name: ssh to vps and deploy image
         uses: appleboy/ssh-action@v0.1.6
@@ -39,22 +49,26 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
+            echo "logging in to docker hub on VPS..."
             echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
             export DOC_ROOT=${{ secrets.DOC_ROOT }}
             echo "pulling the latest docker image..."
             docker pull ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }}
-            echo "cleaning the doc root..."
+
+            echo "cleaning document root..."
             rm -rf $DOC_ROOT/*
+            echo "running container to copy build files..."
             docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} sleep infinity
-            echo "copying build to doc root..."
+            echo "copying build to document root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
+
             echo "checking if the container is running..."
             if docker ps -q -f name=website-container; then
                 echo "stopping and removing the running container..."
                 docker stop website-container
                 docker rm website-container
             else
-                echo "no running container found, skipping stop and remove."
+                echo "no running container found, skipping stop and removal."
             fi
             if docker ps -a -q -f name=website-container; then
                 echo "removing stopped container..."
@@ -62,6 +76,8 @@ jobs:
             else
                 echo "no stopped container found, skipping removal."
             fi
+
+            echo "pruning unused docker resources..."
             docker container prune -f
             docker image prune -f
             docker volume prune -f
@@ -69,4 +85,6 @@ jobs:
 
       - name: cleanup
         run: |
+          echo "cleaning up unused docker resources..."
           docker system prune -f
+          echo "cleanup complete."
