@@ -48,7 +48,24 @@ jobs:
             docker run --rm --name website-container ${{ secrets.DOCKER_USERNAME }}/website:${{ env.COMMIT_SHA }} sleep infinity
             echo "copying build to doc root..."
             docker cp website-container:/website/dist/. $DOC_ROOT/
-            docker system prune -f
+            echo "checking if the container is running..."
+            if docker ps -q -f name=website-container; then
+                echo "stopping and removing the running container..."
+                docker stop website-container
+                docker rm website-container
+            else
+                echo "no running container found, skipping stop and remove."
+            fi
+            if docker ps -a -q -f name=website-container; then
+                echo "removing stopped container..."
+                docker rm website-container
+            else
+                echo "no stopped container found, skipping removal."
+            fi
+            docker container prune -f
+            docker image prune -f
+            docker volume prune -f
+            docker network prune -f
 
       - name: cleanup
         run: |
