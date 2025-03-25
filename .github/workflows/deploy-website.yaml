@@ -27,7 +27,7 @@ jobs:
 
       # todo: add tests step
 
-      - name: ssh to vps and deploy using git reset + docker-compose
+      - name: ssh to vps and deploy
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -42,12 +42,13 @@ jobs:
             echo "building docker image locally..."
             docker build -t website:${{ env.COMMIT_SHA }} --target build . || exit 1
 
-            echo "updating docker-compose with the new image..."
-            sed -i 's|image: .*$|image: website:${{ env.COMMIT_SHA }}|' docker-compose.yaml
+            echo "Copying built files from container to server..."
+            CONTAINER_ID=$(docker create website:${{ env.COMMIT_SHA }})
+            docker cp $CONTAINER_ID:/website/dist/. /var/www/rbk6.dev/public/
+            docker rm $CONTAINER_ID
 
             echo "restarting the service..."
-            docker-compose down --volumes --remove-orphans
-            docker-compose up -d --build --pull always --force-recreate web
+            docker-compose up -d --no-deps --build web
 
             echo "cleaning up unused docker resources..."
             docker image prune -f
