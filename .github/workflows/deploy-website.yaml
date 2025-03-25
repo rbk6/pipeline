@@ -1,4 +1,3 @@
-# CI/CD workflow for https://github.com/rbk6/website
 name: deploy website
 
 on:
@@ -26,6 +25,13 @@ jobs:
           echo "docker image built successfully."
 
       # todo: add tests step
+
+      - name: list files in the repository
+        run: |
+          echo "listing base runner directory"
+          ls -alh
+          echo "listing website directory"
+          ls -alh ./website
 
       - name: ssh to vps and deploy with rsync + docker-compose
         uses: appleboy/ssh-action@v0.1.6
