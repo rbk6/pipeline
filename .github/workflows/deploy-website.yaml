@@ -40,11 +40,11 @@ jobs:
             echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
 
-            rsync -avz --delete --exclude 'node_modules' --exclude 'build' -e "ssh -i ~/.ssh/id_rsa" ./ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/deploy-website/
+            rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" ./website/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/${{ secrets.VPS_USER }}/deploy-website/
 
             cd ~/deploy-website
-            # echo "building docker image locally..."
-            # docker build -t website:${{ env.COMMIT_SHA }} --target build . || exit 1
+            echo "building docker image locally..."
+            docker build -t website:${{ env.COMMIT_SHA }} --target build . || exit 1
 
             echo "updating docker-compose with the new image..."
             sed -i 's|image: .*$|image: website:${{ env.COMMIT_SHA }}|' docker-compose.yaml
@@ -53,5 +53,5 @@ jobs:
             docker-compose down --volumes --remove-orphans
             docker-compose up -d --build --pull always
 
-            echo "cleanup unused docker resources..."
+            echo "cleaning up unused docker resources..."
             docker image prune -f
