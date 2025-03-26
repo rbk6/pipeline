@@ -25,8 +25,6 @@ jobs:
           docker build -t website:$COMMIT_SHA --target build . || exit 1
           echo "docker image built successfully."
 
-      # todo: add tests step
-
       - name: ssh to vps and deploy
         uses: appleboy/ssh-action@v0.1.6
         with:
@@ -42,7 +40,7 @@ jobs:
             echo "building docker image locally..."
             docker build -t website:${{ env.COMMIT_SHA }} --target build . || exit 1
 
-            echo "Copying built files from container to server..."
+            echo "copying built files from container to server..."
             CONTAINER_ID=$(docker create website:${{ env.COMMIT_SHA }})
             docker cp $CONTAINER_ID:/website/dist/. /var/www/rbk6.dev/public/
             docker rm $CONTAINER_ID
