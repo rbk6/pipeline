@@ -19,10 +19,8 @@ jobs:
       - name: build docker image
         id: build
         run: |
-          COMMIT_SHA=$(git rev-parse --short HEAD)
-          echo "COMMIT_SHA=$COMMIT_SHA" >> $GITHUB_ENV
-          echo "building docker image for commit $COMMIT_SHA..."
-          docker build -t website:$COMMIT_SHA --target build . || exit 1
+          echo "building docker image..."
+          docker build -t website:latest --target build . || exit 1
           echo "docker image built successfully."
 
       - name: ssh to vps and deploy
@@ -33,20 +31,10 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
-            cd /home/${{ secrets.VPS_USER }}/deploy-website/website
+            cd /website
             git reset --hard HEAD
             git pull origin master
-
-            echo "building docker image locally..."
-            docker build -t website:${{ env.COMMIT_SHA }} --target build . || exit 1
-
-            echo "copying built files from container to server..."
-            CONTAINER_ID=$(docker create website:${{ env.COMMIT_SHA }})
-            docker cp $CONTAINER_ID:/website/dist/. /var/www/rbk6.dev/public/
-            docker rm $CONTAINER_ID
-
-            echo "restarting the service..."
-            docker-compose up -d --no-deps --build web
-
-            echo "cleaning up unused docker resources..."
+            docker build --no-cache -t website:latest --target build . || exit 1
+            cd ~/traefik
+            docker compose up -d || exit 1
             docker image prune -f
